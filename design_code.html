@@ -1,0 +1,1809 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Drip Irrigation Design Tool</title>
+
+<!-- Add jsPDF library -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+
+<style>
+body { font-family: Arial; margin: 20px; background-color: #f5f5f5; }
+.container { max-width: 1200px; margin: 0 auto; background-color: white; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+h1 { color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px; }
+
+/* Tab Styles */
+.tabs { display: flex; border-bottom: 2px solid #ddd; margin-bottom: 20px; flex-wrap: wrap; }
+.tab { padding: 12px 24px; background-color: #f1f1f1; border: none; cursor: pointer; font-size: 16px; border-radius: 8px 8px 0 0; margin-right: 5px; margin-bottom: 5px; transition: background-color 0.3s; }
+.tab:hover { background-color: #ddd; }
+.tab.active { background-color: #3498db; color: white; font-weight: bold; }
+.tab-content { display: none; padding: 20px; }
+.tab-content.active { display: block; animation: fadeIn 0.5s; }
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Form Styles */
+label { display: inline-block; width: 320px; margin: 8px 0; font-weight: bold; }
+select, input { padding: 8px; margin: 8px 0; width: 350px; border: 1px solid #ccc; border-radius: 4px; }
+input[readonly] { background-color: #f0f0f0; }
+.blue-box { background-color: #cce5ff; border: 1px solid #3399ff; }
+button { padding: 10px 20px; background-color: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; margin: 10px 0; transition: background-color 0.3s; }
+button:hover { background-color: #2980b9; }
+.calculate-btn { background-color: #27ae60; }
+.calculate-btn:hover { background-color: #219653; }
+.download-btn { background-color: #e74c3c; }
+.download-btn:hover { background-color: #c0392b; }
+hr { margin: 20px 0; border: none; border-top: 1px solid #ddd; }
+
+/* Section Headers */
+.section-header { background-color: #2c3e50; color: white; padding: 12px; border-radius: 4px; margin-top: 20px; }
+.section-header h2 { margin: 0; font-size: 18px; }
+
+/* Results Box */
+.results-box { background-color: #f8f9fa; border-left: 4px solid #3498db; padding: 15px; margin: 15px 0; border-radius: 0 4px 4px 0; }
+.summary-box { background-color: #e8f5e8; border-left: 4px solid #27ae60; padding: 15px; margin: 15px 0; border-radius: 0 4px 4px 0; }
+
+/* Segment Button */
+.segment-btn { background-color: #8e44ad; margin-right: 10px; }
+.segment-btn:hover { background-color: #7d3c98; }
+
+/* Minor Losses Segment */
+.minor-loss-segment { 
+    border: 1px solid #aaa; 
+    padding: 15px; 
+    margin-bottom: 15px; 
+    background-color: #f9f9f9; 
+    border-radius: 4px; 
+}
+.minor-loss-header { 
+    background-color: #e3f2fd; 
+    padding: 8px; 
+    margin: -15px -15px 15px -15px; 
+    border-radius: 4px 4px 0 0; 
+    font-weight: bold; 
+}
+
+/* Pump Design Box */
+.pump-input { background-color: #fff3cd; border: 1px solid #ffeaa7; }
+.pump-result { background-color: #d4edda; border: 1px solid #c3e6cb; }
+
+/* Designer Footer */
+.designer-footer {
+    margin-top: 30px;
+    padding: 15px;
+    background-color: #2c3e50;
+    color: white;
+    border-radius: 4px;
+    text-align: center;
+    font-size: 14px;
+}
+.designer-footer a {
+    color: #3498db;
+    text-decoration: none;
+}
+.designer-footer a:hover {
+    text-decoration: underline;
+}
+
+/* Fertigation Section */
+.fertigation-box { 
+    background-color: #e8f4f8; 
+    border-left: 4px solid #17a2b8; 
+    padding: 15px; 
+    margin: 15px 0; 
+    border-radius: 0 4px 4px 0; 
+}
+.fertigation-input { background-color: #f0f8ff; border: 1px solid #a8d5e5; }
+
+/* Download Button Container */
+.download-container {
+    text-align: center;
+    margin: 30px 0;
+    padding: 20px;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    border: 2px dashed #3498db;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .container { padding: 10px; }
+  label { width: 100%; display: block; }
+  select, input { width: 100%; }
+  .tabs { flex-direction: column; }
+  .tab { margin-right: 0; margin-bottom: 2px; }
+}
+</style>
+</head>
+
+<body>
+<div class="container">
+  <h1>Drip Irrigation Design Tool</h1>
+  
+  <!-- Tab Navigation -->
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('lateral')">Lateral Design</button>
+    <button class="tab" onclick="switchTab('submain')">Submain Design</button>
+    <button class="tab" onclick="switchTab('mainline')">Mainline Design</button>
+    <button class="tab" onclick="switchTab('minorlosses')">Minor Losses</button>
+    <button class="tab" onclick="switchTab('pumpdesign')">Pump Sizing</button>
+    <button class="tab" onclick="switchTab('report')">Generate Report</button>
+  </div>
+  
+  <!-- Lateral Design Tab -->
+  <div id="lateral" class="tab-content active">
+    <h2 class="section-header">Dripper Selection</h2>
+    
+    <label>Brand</label>
+    <select id="brand"></select><br>
+    
+    <label>Model</label>
+    <select id="model"></select><br>
+    
+    <label>Rated discharge (catalog) (L/h)</label>
+    <select id="qsel"></select><br>
+    
+    <label>Emitter coefficient k<sub>e</sub></label>
+    <input id="ke" class="blue-box" readonly><br>
+    
+    <label>Emitter exponent x</label>
+    <input id="x" class="blue-box" readonly><br>
+    
+    <h2 class="section-header">Lateral Pipe Size</h2>
+    
+    <label>Lateral OD (mm)</label>
+    <select id="pipeOD"></select><br>
+    
+    <label>Pipe Inside Diameter ID (mm)</label>
+    <input id="pipeID" class="blue-box" readonly><br>
+    
+    <h2 class="section-header">Lateral Hydraulic Inputs</h2>
+    
+    <label>Average pressure head h<sub>a</sub> (m)</label>
+    <input id="ha"><br>
+    
+    <label>Emitter spacing S<sub>e</sub> (m)</label>
+    <input id="Se"><br>
+    
+    <label>Allowable head variation V<sub>h</sub><sup>a</sup> (0.1 mostly)</label>
+    <input id="Vha" ><br>
+    
+    <button onclick="calculate()" class="calculate-btn">Calculate Maximum Lateral Length L<sub>max</sub></button>
+    
+    <div class="results-box">
+      <h3 style="margin-top: 0;">Results: Lateral Allowable Maximum Length</h3>
+      
+      <label>Emitter flow q (L/h) for average head</label>
+      <input id="qcalc" class="blue-box"><br>
+      
+      <label>Maximum lateral length L<sub>max</sub> (m)</label>
+      <input id="Lmax" class="blue-box"><br>
+    </div>
+    
+    <h2 class="section-header">Friction Loss in Laterals</h2>
+    
+    <label>Actual length L<sub>act</sub> (m)</label>
+    <input id="Lact"><br>
+    
+    <label>Slope (+ uphill, − downhill) Enter value of % in decimals</label>
+    <input id="slope"><br>
+    
+    <button onclick="calculateActual()" class="calculate-btn">Calculate Friction Loss and Pressure at Cardinal Points</button>
+    
+    <div class="results-box">
+      <h3 style="margin-top: 0;">Lateral Hydraulic Results</h3>
+      
+      <label>Lateral flow Q<sub>l</sub> (lps)</label>
+      <input id="Ql" class="blue-box" readonly><br>
+      
+      <label>Friction loss h<sub>f</sub> (m)</label>
+      <input id="hf" class="blue-box" readonly><br>
+      
+      <label>Lateral inlet pressure h<sub>0</sub> (m)</label>
+      <input id="h0" class="blue-box" readonly><br>
+      
+      <label>Location of minimum pressure in lateral L<sub>m</sub> (m)</label>
+      <input id="Lm" class="blue-box" readonly><br>
+      
+      <label>Minimum pressure in lateral h<sub>min</sub> (m)</label>
+      <input id="hmin" class="blue-box" readonly><br>
+      
+      <label>Outlet pressure (Pressure at lateral end) h<sub>L</sub> (m)</label>
+      <input id="hL" class="blue-box" readonly><br>
+    </div>
+    
+    <div class="results-box">
+      <h3 style="margin-top: 0;">Allowable Head and Discharge Variation Check</h3>
+      
+      <label>h<sub>min</sub> (m)</label>
+      <input id="hmin2" class="blue-box" readonly><br>
+      
+      <label>h<sub>max</sub> (m)</label>
+      <input id="hmax2" class="blue-box" readonly><br>
+      
+      <label>Pressure variation along the lateral h<sub>var</sub> (%)</label>
+      <input id="hvar" class="blue-box" readonly><br>
+      
+      <label>Discharge variation along the lateral q<sub>var</sub> (%)</label>
+      <input id="qvar" class="blue-box" readonly><br>
+      
+      <label>Whether the variations are within limits?</label>
+      <input id="status" class="blue-box" readonly><br>
+      
+      <label>Permissible pressure variation in Submain pipe h<sub>permi_sub</sub> (%)</label>
+      <input id="hpermi_sub" class="blue-box" readonly><br>
+    </div>
+  </div>
+  
+  <!-- Submain Design Tab -->
+  <div id="submain" class="tab-content">
+    <h2 class="section-header">Submain Design Parameters</h2>
+    
+    <label>Submain area A<sub>sub</sub> (m²)</label>
+    <input id="Asub"><br>
+    
+    <label>Crop spacing (m)</label>
+    <input id="Scrop"><br>
+    
+    <label>Submain pipe OD (mm)</label>
+    <select id="subOD"></select><br>
+    
+    <label>Submain pipe ID (mm)</label>
+    <input id="subID" class="blue-box" readonly><br>
+    
+    <label>Submain length L<sub>s</sub> (m)</label>
+    <input id="Ls"><br>
+    
+    <label>Submain slope S<sub>s</sub> (+ uphill, − downhill)</label>
+    <input id="Ss"><br>
+    
+    <button onclick="calculateSubmain()" class="calculate-btn">Calculate Submain Flow and Friction Loss</button>
+    
+    <div class="results-box">
+      <h3 style="margin-top: 0;">Submain Hydraulic Results</h3>
+      
+      <label>Application rate AR (L/h/m²)</label>
+      <input id="AR" class="blue-box" readonly><br>
+      
+      <label>Submain discharge Q<sub>sub</sub> (L/h)</label>
+      <input id="Qsub" class="blue-box" readonly><br>
+      
+      <label>Submain velocity V<sub>s</sub> (m/s)</label>
+      <input id="Vs" class="blue-box" readonly><br>
+      
+      <label>Velocity status</label>
+      <input id="Vstatus" class="blue-box" readonly><br>
+      
+      <label>Submain friction loss h<sub>fs</sub> (m)</label>
+      <input id="hfs" class="blue-box" readonly><br>
+    </div>
+    
+    <h2 class="section-header">Pressure at Cardinal Points on Submain Pipe</h2>
+    
+    <div class="results-box">
+      <label>Manifold inlet pressure h<sub>mo</sub> (m)</label>
+      <input id="hmo" class="blue-box" readonly><br>
+      
+      <label>Location of minimum pressure L<sub>min-sub</sub> (m)</label>
+      <input id="Lminsub" class="blue-box" readonly><br>
+      
+      <label>Minimum submain pressure h<sub>min-sub</sub> (m)</label>
+      <input id="hminsub" class="blue-box" readonly><br>
+      
+      <label>Submain distal-end pressure h<sub>max-sub</sub> (m)</label>
+      <input id="hmaxsub" class="blue-box" readonly><br>
+    </div>
+    
+    <div class="results-box">
+      <h3 style="margin-top: 0;">Submain Pressure Variation Analysis</h3>
+      
+      <label>Submain h<sub>min</sub> (m)</label>
+      <input id="hmin_sub_all" class="blue-box" readonly><br>
+      
+      <label>Submain h<sub>max</sub> (m)</label>
+      <input id="hmax_sub_all" class="blue-box" readonly><br>
+      
+      <label>Submain pressure variation h<sub>var-sub</sub> (%)</label>
+      <input id="hvar_sub" class="blue-box" readonly><br>
+      
+      <label>Whether the pressure variations are within limits?</label>
+      <input id="sub_status" class="blue-box" readonly><br>
+    </div>
+  </div>
+  
+  <!-- Mainline Design Tab -->
+  <div id="mainline" class="tab-content">
+    <h2 class="section-header">Mainline Friction Loss</h2>
+    
+    <h3>Section 1 (Critical Reach)</h3>
+    
+    <label>Mainline discharge Q<sub>m</sub> (L/h)</label>
+    <input id="Qm"><br>
+    
+    <label>Mainline length L<sub>m</sub> (m)</label>
+    <input id="Lm_main"><br>
+    
+    <label>Mainline pipe OD (mm)</label>
+    <select id="mainOD"></select><br>
+    
+    <label>Mainline pipe ID (mm)</label>
+    <input id="mainID" class="blue-box" readonly><br>
+    
+    <label>Mainline slope S<sub>m</sub> (+ uphill, − downhill)</label>
+    <input id="Sm"><br>
+    
+    <button onclick="calculateMainline()" class="calculate-btn">Calculate Mainline Loss of the First Segment</button>
+    
+    <div class="results-box">
+      <label>Mainline velocity V<sub>m</sub> (m/s)</label>
+      <input id="Vm" class="blue-box" readonly><br>
+      
+      <label>Mainline friction loss h<sub>fm</sub> (m)</label>
+      <input id="hfm" class="blue-box" readonly><br>
+      
+      <label>Mainline elevation head Δh<sub>m</sub> (m)</label>
+      <input id="hsm" class="blue-box" readonly><br>
+    </div>
+    
+    <h3>Additional Mainline Segments</h3>
+    
+    <div id="mainSegments"></div>
+    
+    <button onclick="addMainSegment()" class="segment-btn">Add Next Mainline Segment</button>
+    
+    <h3>Total Mainline Loss Calculation</h3>
+    
+    <button onclick="calculateAllMainline()" class="calculate-btn">Calculate Total Mainline Loss</button>
+    
+    <div class="results-box">
+      <label>Total Mainline Friction h<sub>fm,total</sub> (m)</label>
+      <input id="hfm_tot" class="blue-box" readonly><br>
+      
+      <label>Total Mainline Elevation head h<sub>sm,total</sub> (m)</label>
+      <input id="hsm_tot" class="blue-box" readonly><br>
+      
+      <label>Mainline Head + Elevation Head H<sub>m</sub> (m)</label>
+      <input id="Hm_tot" class="blue-box" readonly><br>
+    </div>
+  </div>
+  
+  <!-- Minor Losses Tab -->
+  <div id="minorlosses" class="tab-content">
+    <h2 class="section-header">Minor Losses Calculation</h2>
+    
+    <p>Calculate head losses due to fittings and valves in the pipeline system. Each fitting contributes to the total head loss based on its loss coefficient (k<sub>f</sub>).</p>
+    
+    <div id="minorLossSegments"></div>
+    
+    <button onclick="addMinorLossSegment()" class="segment-btn">Add Another Fitting</button>
+    
+    <h3 class="section-header">Total Minor Losses</h3>
+    
+    <div class="results-box">
+      <label>Total Minor Losses h<sub>minor,total</sub> (m)</label>
+      <input id="hminor_tot" class="blue-box" readonly><br>
+      
+      <label>Number of Fittings</label>
+      <input id="numFittings" class="blue-box" readonly><br>
+    </div>
+    
+    <button onclick="calculateTotalMinorLosses()" class="calculate-btn">Calculate Total Minor Losses</button>
+  </div>
+  
+  <!-- Pump Design Tab -->
+  <div id="pumpdesign" class="tab-content">
+    <h2 class="section-header">Pump Design Parameters</h2>
+    
+    <p>Calculate total system head and required pump horsepower based on all system losses.</p>
+    
+    <h3>System Head Loss Components</h3>
+    
+    <div class="summary-box">
+      <h4 style="margin-top: 0;">Automatically Imported Values from Previous Tabs</h4>
+      
+      <label>Lateral Friction Loss h<sub>f</sub> (m)</label>
+      <input id="import_hf" class="blue-box" readonly><br>
+      
+      <label>Submain Friction Loss h<sub>fs</sub> (m)</label>
+      <input id="import_hfs" class="blue-box" readonly><br>
+      
+      <label>Mainline Total Head H<sub>m</sub> (m)</label>
+      <input id="import_Hm" class="blue-box" readonly><br>
+      
+      <label>Total Minor Losses h<sub>minor,total</sub> (m)</label>
+      <input id="import_hminor_tot" class="blue-box" readonly><br>
+      
+      <button onclick="importSystemLosses()" class="calculate-btn">Import Current System Losses</button>
+      <p style="font-size: 12px; color: #666; margin-top: 5px;">Click to update with latest calculated values from other tabs</p>
+    </div>
+    
+    <h3>Fertigation System Friction Loss</h3>
+    
+    <div class="fertigation-box">
+      <p>Fertigation system adds additional friction losses due to injection pumps, venturi systems, fertilizer tanks, and mixing chambers.</p>
+      
+      <label>Fertigation Injection System Type</label>
+      <select id="fertigation_type" class="fertigation-input">
+        <option value="0">No Fertigation System</option>
+        <option value="1">Venturi Injector</option>
+        <option value="2">Diaphragm Pump</option>
+        <option value="3">Piston Pump</option>
+        <option value="4">Fertilizer Tank with Mixer</option>
+        <option value="5">Complete Fertigation Unit</option>
+      </select><br>
+      
+      <label>Number of Injection Points</label>
+      <input id="injection_points" class="fertigation-input" type="number" min="0" value="1"><br>
+      
+      <label>Fertilizer Solution Viscosity Factor (1.0 for water, 1.1-1.3 for fertilizer)</label>
+      <input id="viscosity_factor" class="fertigation-input" type="number" min="1.0" max="2.0" step="0.1" value="1.2"><br>
+      
+      <label>Additional Head Loss due to Fertigation (m)</label>
+      <input id="fertigation_loss" class="fertigation-input" readonly><br>
+      
+      <button onclick="calculateFertigationLoss()" class="calculate-btn">Calculate Fertigation Friction Loss</button>
+    </div>
+    
+    <h3>Additional Head Loss Components</h3>
+    
+    <div class="results-box">
+      <label>Primary Filter Head Loss (m)</label>
+      <input id="primary_filter" class="pump-input"><br>
+      
+      <label>Secondary Filter Head Loss (m)</label>
+      <input id="secondary_filter" class="pump-input"><br>
+      
+      <label>Suction Head (m) <span style="font-size: 12px; color: #666;">(positive for lift, negative for flooded suction)</span></label>
+      <input id="suction_head" class="pump-input"><br>
+      
+      <label>Working Pressure at Emitter (m)</label>
+      <input id="emitter_pressure" class="pump-input"><br>
+    </div>
+    
+    <h3>Pump Specifications</h3>
+    
+    <div class="results-box">
+      <label>Pump Flow Rate Q<sub>pump</sub> (L/h)</label>
+      <input id="pump_flow" class="pump-input"><br>
+      
+      <label>Pump Efficiency η (%)</label>
+      <input id="pump_efficiency" class="pump-input"><br>
+      
+      <label>Safety Factor (%) <span style="font-size: 12px; color: #666;">(recommended: 10-20%)</span></label>
+      <input id="safety_factor" class="pump-input" value="15"><br>
+    </div>
+    
+    <button onclick="calculatePumpHP()" class="calculate-btn">Calculate Total Head and Pump Horsepower</button>
+    
+    <h3 class="section-header">Pump Design Results</h3>
+    
+    <div class="summary-box">
+      <h4 style="margin-top: 0;">Total System Head Calculation</h4>
+      
+      <label>Total Friction Loss (Lateral + Submain + Mainline + Minor) (m)</label>
+      <input id="total_friction_loss" class="pump-result" readonly><br>
+      
+      <label>Total Filter Loss (Primary + Secondary) (m)</label>
+      <input id="total_filter_loss" class="pump-result" readonly><br>
+      
+      <label>Fertigation System Loss (m)</label>
+      <input id="total_fertigation_loss" class="pump-result" readonly><br>
+      
+      <label>Total System Head H<sub>total</sub> (m)</label>
+      <input id="total_system_head" class="pump-result" readonly><br>
+      
+      <label>Total System Head with Safety Factor (m)</label>
+      <input id="total_system_head_safety" class="pump-result" readonly><br>
+    </div>
+    
+    <div class="summary-box">
+      <h4 style="margin-top: 0;">Pump Power Requirement</h4>
+      
+      <label>Water Power Required (kW)</label>
+      <input id="water_power_kw" class="pump-result" readonly><br>
+      
+      <label>Water Power Required (HP)</label>
+      <input id="water_power_hp" class="pump-result" readonly><br>
+      
+      <label>Pump Shaft Power Required (kW)</label>
+      <input id="pump_shaft_power_kw" class="pump-result" readonly><br>
+      
+      <label>Pump Shaft Power Required (HP)</label>
+      <input id="pump_shaft_power_hp" class="pump-result" readonly><br>
+      
+      <label>Recommended Pump Size (HP)</label>
+      <input id="recommended_pump_hp" class="pump-result" readonly><br>
+      
+      <label>Status</label>
+      <input id="pump_status" class="pump-result" readonly><br>
+    </div>
+  </div>
+  
+  <!-- Report Generation Tab -->
+  <div id="report" class="tab-content">
+    <h2 class="section-header">Generate Design Report</h2>
+    
+    <div class="download-container">
+      <h3 style="color: #2c3e50;">Complete Design Report</h3>
+      <p>Generate a comprehensive PDF report containing all design calculations, parameters, and results.</p>
+      
+      <div class="results-box" style="text-align: left; margin: 20px auto; max-width: 600px;">
+        <h4>Report Contents:</h4>
+        <ul>
+          <li>Project Information & Date</li>
+          <li>Dripper Selection Details</li>
+          <li>Lateral Design Calculations</li>
+          <li>Submain Design Results</li>
+          <li>Mainline Design Analysis</li>
+          <li>Minor Losses Summary</li>
+          <li>Pump Sizing & Specifications</li>
+          <li>Fertigation System Details</li>
+          <li>Designer Information</li>
+        </ul>
+      </div>
+      
+      <div class="summary-box" style="text-align: left; margin: 20px auto; max-width: 600px;">
+        <h4>Additional Report Options:</h4>
+        
+        <label>Project Name:</label>
+        <input id="project_name" placeholder="Enter project name" style="width: 100%;"><br>
+        
+        <label>Client Name:</label>
+        <input id="client_name" placeholder="Enter client name" style="width: 100%;"><br>
+        
+        <label>Location:</label>
+        <input id="project_location" placeholder="Enter project location" style="width: 100%;"><br>
+        
+        <label>Date:</label>
+        <input id="report_date" type="date" style="width: 100%;"><br>
+        
+        <label>Include Design Notes:</label>
+        <textarea id="design_notes" placeholder="Enter any additional design notes..." rows="3" style="width: 100%; margin-top: 10px;"></textarea><br>
+      </div>
+      
+      <button onclick="generatePDFReport()" class="download-btn" style="font-size: 18px; padding: 15px 30px;">
+        📥 Download Complete Design Report (PDF)
+      </button>
+      
+      <p style="margin-top: 15px; color: #666; font-size: 14px;">
+        Report will be generated with current design data. Ensure all calculations are completed.
+      </p>
+    </div>
+    
+    <div class="results-box">
+      <h3 style="margin-top: 0;">Report Preview</h3>
+      <div id="reportPreview" style="background: white; padding: 15px; border: 1px solid #ddd; min-height: 200px;">
+        <p>Report preview will appear here...</p>
+      </div>
+      <button onclick="previewReport()" class="calculate-btn" style="margin-top: 10px;">Preview Report</button>
+    </div>
+  </div>
+</div>
+
+<!-- Designer Footer -->
+<div class="designer-footer">
+  <p><strong>Website Designed by:</strong> Dr. Prakash Mohan</p>
+  <p>Contact: <a href="tel:+918464050703">+91 84640 50703</a> | Email: <a href="mailto:p123mohan@gmail.com">p123mohan@gmail.com</a></p>
+  <p>Irrigation Design Specialist | © 2026 Drip Irrigation Design Tool</p>
+</div>
+
+<script>
+/* ========================= PDF REPORT GENERATION ========================= */
+function generatePDFReport() {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF('p', 'mm', 'a4');
+    
+    // Get current date
+    const now = new Date();
+    const dateString = now.toLocaleDateString('en-GB');
+    const timeString = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+    
+    // Get user inputs for report
+    const projectName = document.getElementById('project_name').value || 'Drip Irrigation Design Project';
+    const clientName = document.getElementById('client_name').value || 'Not Specified';
+    const projectLocation = document.getElementById('project_location').value || 'Not Specified';
+    const reportDate = document.getElementById('report_date').value || dateString;
+    const designNotes = document.getElementById('design_notes').value || 'No additional notes provided.';
+    
+    // Header
+    doc.setFontSize(20);
+    doc.setTextColor(44, 62, 80);
+    doc.text('DRIP IRRIGATION DESIGN REPORT', 105, 20, { align: 'center' });
+    
+    doc.setFontSize(12);
+    doc.setTextColor(100, 100, 100);
+    doc.text(`Project: ${projectName}`, 20, 30);
+    doc.text(`Client: ${clientName}`, 20, 37);
+    doc.text(`Location: ${projectLocation}`, 20, 44);
+    doc.text(`Date: ${reportDate}`, 20, 51);
+    doc.text(`Generated: ${dateString} ${timeString}`, 20, 58);
+    
+    // Designer info
+    doc.setTextColor(52, 152, 219);
+    doc.setFontSize(10);
+    doc.text('Designed by: ………………… | Ph:...................... | Mail:.............................', 105, 65, { align: 'center' });
+    
+    let yPos = 75;
+    
+    // Executive Summary
+    doc.setFontSize(14);
+    doc.setTextColor(44, 62, 80);
+    doc.text('EXECUTIVE SUMMARY', 20, yPos);
+    yPos += 10;
+    
+    doc.setFontSize(10);
+    doc.setTextColor(0, 0, 0);
+    const summaryText = `This report presents the complete hydraulic design for a drip irrigation system. 
+The design includes lateral layout, submain sizing, mainline calculations, and pump specifications.
+All calculations follow standard irrigation engineering principles.`;
+    doc.text(summaryText, 20, yPos, { maxWidth: 170 });
+    yPos += 25;
+    
+    // 1. Dripper Selection
+    doc.setFontSize(12);
+    doc.setTextColor(44, 62, 80);
+    doc.text('1. DRIPPER SELECTION', 20, yPos);
+    yPos += 10;
+    
+    const dripperData = [
+        ['Parameter', 'Value'],
+        ['Brand', document.getElementById('brand').value || 'N/A'],
+        ['Model', document.getElementById('model').value || 'N/A'],
+        ['Rated Discharge (L/h)', document.getElementById('qsel').value || 'N/A'],
+        ['Emitter Coefficient (ke)', document.getElementById('ke').value || 'N/A'],
+        ['Emitter Exponent (x)', document.getElementById('x').value || 'N/A']
+    ];
+    
+    doc.autoTable({
+        startY: yPos,
+        head: [dripperData[0]],
+        body: dripperData.slice(1),
+        theme: 'grid',
+        headStyles: { fillColor: [52, 152, 219] },
+        margin: { left: 20 }
+    });
+    
+    yPos = doc.lastAutoTable.finalY + 15;
+    
+    // 2. Lateral Design
+    doc.setFontSize(12);
+    doc.setTextColor(44, 62, 80);
+    doc.text('2. LATERAL DESIGN', 20, yPos);
+    yPos += 10;
+    
+    const lateralData = [
+        ['Parameter', 'Value', 'Unit'],
+        ['Average Pressure Head (ha)', document.getElementById('ha').value || 'N/A', 'm'],
+        ['Emitter Spacing (Se)', document.getElementById('Se').value || 'N/A', 'm'],
+        ['Allowable Head Variation', document.getElementById('Vha').value || 'N/A', ''],
+        ['Lateral OD', document.getElementById('pipeOD').value || 'N/A', 'mm'],
+        ['Lateral ID', document.getElementById('pipeID').value || 'N/A', 'mm'],
+        ['Max Lateral Length (Lmax)', document.getElementById('Lmax').value || 'N/A', 'm'],
+        ['Actual Lateral Length', document.getElementById('Lact').value || 'N/A', 'm'],
+        ['Lateral Flow (Ql)', document.getElementById('Ql').value || 'N/A', 'lps'],
+        ['Friction Loss (hf)', document.getElementById('hf').value || 'N/A', 'm'],
+        ['Pressure Variation', document.getElementById('hvar').value || 'N/A', '%'],
+        ['Discharge Variation', document.getElementById('qvar').value || 'N/A', '%'],
+        ['Design Status', document.getElementById('status').value || 'N/A', '']
+    ];
+    
+    doc.autoTable({
+        startY: yPos,
+        head: [lateralData[0]],
+        body: lateralData.slice(1),
+        theme: 'grid',
+        headStyles: { fillColor: [52, 152, 219] },
+        margin: { left: 20 }
+    });
+    
+    yPos = doc.lastAutoTable.finalY + 15;
+    
+    // Check if we need a new page
+    if (yPos > 250) {
+        doc.addPage();
+        yPos = 20;
+    }
+    
+    // 3. Submain Design
+    doc.setFontSize(12);
+    doc.setTextColor(44, 62, 80);
+    doc.text('3. SUBMAIN DESIGN', 20, yPos);
+    yPos += 10;
+    
+    const submainData = [
+        ['Parameter', 'Value', 'Unit'],
+        ['Submain Area', document.getElementById('Asub').value || 'N/A', 'm²'],
+        ['Crop Spacing', document.getElementById('Scrop').value || 'N/A', 'm'],
+        ['Submain OD', document.getElementById('subOD').value || 'N/A', 'mm'],
+        ['Submain ID', document.getElementById('subID').value || 'N/A', 'mm'],
+        ['Submain Length', document.getElementById('Ls').value || 'N/A', 'm'],
+        ['Application Rate', document.getElementById('AR').value || 'N/A', 'L/h/m²'],
+        ['Submain Discharge', document.getElementById('Qsub').value || 'N/A', 'L/h'],
+        ['Submain Velocity', document.getElementById('Vs').value || 'N/A', 'm/s'],
+        ['Submain Friction Loss', document.getElementById('hfs').value || 'N/A', 'm'],
+        ['Pressure Variation', document.getElementById('hvar_sub').value || 'N/A', '%'],
+        ['Design Status', document.getElementById('sub_status').value || 'N/A', '']
+    ];
+    
+    doc.autoTable({
+        startY: yPos,
+        head: [submainData[0]],
+        body: submainData.slice(1),
+        theme: 'grid',
+        headStyles: { fillColor: [52, 152, 219] },
+        margin: { left: 20 }
+    });
+    
+    yPos = doc.lastAutoTable.finalY + 15;
+    
+    // 4. Mainline Design
+    doc.setFontSize(12);
+    doc.setTextColor(44, 62, 80);
+    doc.text('4. MAINLINE DESIGN', 20, yPos);
+    yPos += 10;
+    
+    const mainlineData = [
+        ['Parameter', 'Value', 'Unit'],
+        ['Mainline Discharge', document.getElementById('Qm').value || 'N/A', 'L/h'],
+        ['Mainline Length', document.getElementById('Lm_main').value || 'N/A', 'm'],
+        ['Mainline OD', document.getElementById('mainOD').value || 'N/A', 'mm'],
+        ['Mainline ID', document.getElementById('mainID').value || 'N/A', 'mm'],
+        ['Mainline Velocity', document.getElementById('Vm').value || 'N/A', 'm/s'],
+        ['Friction Loss', document.getElementById('hfm').value || 'N/A', 'm'],
+        ['Total Friction Loss', document.getElementById('hfm_tot').value || 'N/A', 'm'],
+        ['Total Elevation Head', document.getElementById('hsm_tot').value || 'N/A', 'm'],
+        ['Total Mainline Head', document.getElementById('Hm_tot').value || 'N/A', 'm']
+    ];
+    
+    doc.autoTable({
+        startY: yPos,
+        head: [mainlineData[0]],
+        body: mainlineData.slice(1),
+        theme: 'grid',
+        headStyles: { fillColor: [52, 152, 219] },
+        margin: { left: 20 }
+    });
+    
+    yPos = doc.lastAutoTable.finalY + 15;
+    
+    // Check if we need a new page
+    if (yPos > 250) {
+        doc.addPage();
+        yPos = 20;
+    }
+    
+    // 5. Minor Losses
+    doc.setFontSize(12);
+    doc.setTextColor(44, 62, 80);
+    doc.text('5. MINOR LOSSES', 20, yPos);
+    yPos += 10;
+    
+    const minorLossData = [
+        ['Parameter', 'Value', 'Unit'],
+        ['Total Minor Losses', document.getElementById('hminor_tot').value || 'N/A', 'm'],
+        ['Number of Fittings', document.getElementById('numFittings').value || 'N/A', '']
+    ];
+    
+    doc.autoTable({
+        startY: yPos,
+        head: [minorLossData[0]],
+        body: minorLossData.slice(1),
+        theme: 'grid',
+        headStyles: { fillColor: [52, 152, 219] },
+        margin: { left: 20 }
+    });
+    
+    yPos = doc.lastAutoTable.finalY + 15;
+    
+    // 6. Pump Sizing
+    doc.setFontSize(12);
+    doc.setTextColor(44, 62, 80);
+    doc.text('6. PUMP SIZING', 20, yPos);
+    yPos += 10;
+    
+    const pumpData = [
+        ['Parameter', 'Value', 'Unit'],
+        ['Pump Flow Rate', document.getElementById('pump_flow').value || 'N/A', 'L/h'],
+        ['Pump Efficiency', document.getElementById('pump_efficiency').value || 'N/A', '%'],
+        ['Safety Factor', document.getElementById('safety_factor').value || '15', '%'],
+        ['Total Friction Loss', document.getElementById('total_friction_loss').value || 'N/A', 'm'],
+        ['Total Filter Loss', document.getElementById('total_filter_loss').value || 'N/A', 'm'],
+        ['Fertigation Loss', document.getElementById('total_fertigation_loss').value || 'N/A', 'm'],
+        ['Total System Head', document.getElementById('total_system_head').value || 'N/A', 'm'],
+        ['Total Head with Safety', document.getElementById('total_system_head_safety').value || 'N/A', 'm'],
+        ['Water Power Required', document.getElementById('water_power_hp').value || 'N/A', 'HP'],
+        ['Pump Shaft Power', document.getElementById('pump_shaft_power_hp').value || 'N/A', 'HP'],
+        ['Recommended Pump Size', document.getElementById('recommended_pump_hp').value || 'N/A', 'HP'],
+        ['Design Status', document.getElementById('pump_status').value || 'N/A', '']
+    ];
+    
+    doc.autoTable({
+        startY: yPos,
+        head: [pumpData[0]],
+        body: pumpData.slice(1),
+        theme: 'grid',
+        headStyles: { fillColor: [52, 152, 219] },
+        margin: { left: 20 }
+    });
+    
+    yPos = doc.lastAutoTable.finalY + 15;
+    
+    // 7. Fertigation System
+    doc.setFontSize(12);
+    doc.setTextColor(44, 62, 80);
+    doc.text('7. FERTIGATION SYSTEM', 20, yPos);
+    yPos += 10;
+    
+    const fertType = document.getElementById('fertigation_type');
+    const fertigationTypeText = fertType.options[fertType.selectedIndex].text;
+    
+    const fertigationData = [
+        ['Parameter', 'Value', 'Unit'],
+        ['System Type', fertigationTypeText, ''],
+        ['Injection Points', document.getElementById('injection_points').value || '1', ''],
+        ['Viscosity Factor', document.getElementById('viscosity_factor').value || '1.2', ''],
+        ['Head Loss', document.getElementById('fertigation_loss').value || 'N/A', 'm']
+    ];
+    
+    doc.autoTable({
+        startY: yPos,
+        head: [fertigationData[0]],
+        body: fertigationData.slice(1),
+        theme: 'grid',
+        headStyles: { fillColor: [52, 152, 219] },
+        margin: { left: 20 }
+    });
+    
+    yPos = doc.lastAutoTable.finalY + 15;
+    
+    // 8. Design Notes
+    doc.setFontSize(12);
+    doc.setTextColor(44, 62, 80);
+    doc.text('8. DESIGN NOTES', 20, yPos);
+    yPos += 10;
+    
+    doc.setFontSize(10);
+    doc.setTextColor(0, 0, 0);
+    doc.text(designNotes, 20, yPos, { maxWidth: 170 });
+    yPos += 30;
+    
+    // Footer
+    doc.setFontSize(9);
+    doc.setTextColor(100, 100, 100);
+    doc.text('This report was generated using Drip Irrigation Design Tool', 105, 280, { align: 'center' });
+    doc.text('Designed by Dr. Prakash Mohan | Contact: +91 84640 50703', 105, 285, { align: 'center' });
+    doc.text('Page ' + doc.internal.getNumberOfPages(), 190, 285, { align: 'right' });
+    
+    // Save the PDF
+    const fileName = `Drip_Irrigation_Design_${projectName.replace(/\s+/g, '_')}_${dateString.replace(/\//g, '-')}.pdf`;
+    doc.save(fileName);
+    
+    alert(`PDF report "${fileName}" has been generated successfully!`);
+}
+
+function previewReport() {
+    const previewDiv = document.getElementById('reportPreview');
+    const now = new Date();
+    const dateString = now.toLocaleDateString('en-GB');
+    
+    const projectName = document.getElementById('project_name').value || 'Drip Irrigation Design Project';
+    const clientName = document.getElementById('client_name').value || 'Not Specified';
+    
+    // Get key design values
+    const pumpSize = document.getElementById('recommended_pump_hp').value || 'N/A';
+    const totalHead = document.getElementById('total_system_head_safety').value || 'N/A';
+    const flowRate = document.getElementById('pump_flow').value || 'N/A';
+    const status = document.getElementById('pump_status').value || 'N/A';
+    
+    previewDiv.innerHTML = `
+        <h4 style="color: #2c3e50; margin-top: 0;">Report Preview</h4>
+        <hr>
+        <p><strong>Project:</strong> ${projectName}</p>
+        <p><strong>Client:</strong> ${clientName}</p>
+        <p><strong>Date:</strong> ${dateString}</p>
+        <hr>
+        <h5 style="color: #3498db;">Key Design Parameters:</h5>
+        <table style="width: 100%; border-collapse: collapse; margin: 10px 0;">
+            <tr style="background-color: #f2f2f2;">
+                <td style="padding: 8px; border: 1px solid #ddd;"><strong>Recommended Pump Size</strong></td>
+                <td style="padding: 8px; border: 1px solid #ddd;">${pumpSize} HP</td>
+            </tr>
+            <tr>
+                <td style="padding: 8px; border: 1px solid #ddd;"><strong>Total System Head</strong></td>
+                <td style="padding: 8px; border: 1px solid #ddd;">${totalHead} m</td>
+            </tr>
+            <tr style="background-color: #f2f2f2;">
+                <td style="padding: 8px; border: 1px solid #ddd;"><strong>Flow Rate</strong></td>
+                <td style="padding: 8px; border: 1px solid #ddd;">${flowRate} L/h</td>
+            </tr>
+            <tr>
+                <td style="padding: 8px; border: 1px solid #ddd;"><strong>Design Status</strong></td>
+                <td style="padding: 8px; border: 1px solid #ddd;">${status}</td>
+            </tr>
+        </table>
+        <p style="font-size: 12px; color: #666; margin-top: 15px;">
+            This is a preview. The complete PDF report will contain detailed calculations for all design sections.
+        </p>
+    `;
+    
+    alert('Report preview generated. Click "Download Complete Design Report" to generate PDF.');
+}
+
+/* ========================= TAB MANAGEMENT (Updated) ========================= */
+function switchTab(tabName) {
+  // Hide all tab contents
+  document.querySelectorAll('.tab-content').forEach(tab => {
+    tab.classList.remove('active');
+  });
+  
+  // Remove active class from all tabs
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.classList.remove('active');
+  });
+  
+  // Show selected tab content and activate tab button
+  document.getElementById(tabName).classList.add('active');
+  event.target.classList.add('active');
+  
+  // If switching to pump design tab, import current values
+  if (tabName === 'pumpdesign') {
+    importSystemLosses();
+  }
+  
+  // If switching to report tab, set current date
+  if (tabName === 'report') {
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('report_date').value = today;
+    previewReport();
+  }
+}
+
+/* ========================= DRIPPER DATABASE ========================= */
+const data = [ 
+{Brand:"Jain",Model:"J-SC PC-plus",ke:2.01,x:0.04,q:2.2},
+{Brand:"Jain",Model:"J-SC PC-plus",ke:3.92,x:0.03,q:4.2},
+{Brand:"Jain",Model:"J-SC PC-plus",ke:6.82,x:0.08,q:8.2},
+{Brand:"Jain",Model:"Click Tif-PC-PCNL",ke:1.1,x:0.04,q:1.2},
+{Brand:"Jain",Model:"Click Tif-PC-PCNL",ke:1.83,x:0.04,q:2.0},
+{Brand:"Jain",Model:"Click Tif-PC-PCNL",ke:2.8,x:0.03,q:3.0},
+{Brand:"Jain",Model:"Click Tif-PC-PCNL",ke:3.65,x:0.04,q:4.0},
+{Brand:"Jain",Model:"Click Tif-PC-PCNL",ke:7.3,x:0.04,q:8.0},
+{Brand:"Jain",Model:"Click Tif-PC-PCNL",ke:10.95,x:0.04,q:12.0},
+{Brand:"Jain",Model:"Micro Flapper",ke:1.79,x:0.05,q:2.0},
+{Brand:"Jain",Model:"Micro Flapper",ke:2.68,x:0.05,q:3.0},
+{Brand:"Jain",Model:"Micro Flapper",ke:3.57,x:0.05,q:4.0},
+{Brand:"Jain",Model:"Micro Flapper",ke:7.135,x:0.05,q:8.0},
+{Brand:"Jain",Model:"J Turbo Key Super",ke:2.65,x:0.48,q:8.0},
+{Brand:"Jain",Model:"J Turbo Key Super",ke:4.636,x:0.48,q:14.0},
+{Brand:"Jain",Model:"J Turbo Key Plus",ke:0.665,x:0.48,q:2.0},
+{Brand:"Jain",Model:"J Turbo Key Plus",ke:1.325,x:0.48,q:4.0},
+{Brand:"Jain",Model:"J Turbo Key Plus",ke:2.65,x:0.48,q:8.0},
+{Brand:"Jain",Model:"J Turbo Key Plus",ke:4.637,x:0.48,q:14.0},
+{Brand:"Jain",Model:"Jain Emitter",ke:0.665,x:0.48,q:2.0},
+{Brand:"Jain",Model:"Jain Emitter",ke:1.325,x:0.48,q:4.0},
+{Brand:"Jain",Model:"Jain Emitter",ke:2.65,x:0.48,q:8.0},
+{Brand:"Jain",Model:"Jain Emitter",ke:4.637,x:0.48,q:14.0},
+{Brand:"Jain",Model:"Turbo Seal emitter",ke:0.727,x:0.44,q:2.0},
+{Brand:"Jain",Model:"Turbo Seal emitter",ke:1.455,x:0.44,q:4.0},
+{Brand:"Jain",Model:"Turbo Seal emitter",ke:2.905,x:0.44,q:8.0},
+{Brand:"Jain",Model:"Mini Inline emitter",ke:0.727,x:0.44,q:2.0},
+{Brand:"Jain",Model:"Mini Inline emitter",ke:1.455,x:0.44,q:4.0},
+{Brand:"Jain",Model:"Mini Inline emitter",ke:2.712,x:0.47,q:8.0},
+{Brand:"Jain",Model:"Turboline PC Emitter-16 mm",ke:1.1,x:0,q:1.1},
+{Brand:"Jain",Model:"Turboline PC Emitter-16 mm",ke:1.6,x:0,q:1.6},
+{Brand:"Jain",Model:"Turboline PC Emitter-16 mm",ke:2.2,x:0,q:2.2},
+{Brand:"Jain",Model:"Turboline PC Emitter-16 mm",ke:3.5,x:0,q:3.5},
+{Brand:"Netafim",Model:"UniRam RC",ke:0.7,x:0,q:0.7},
+{Brand:"Netafim",Model:"UniRam RC",ke:1,x:0,q:1},
+{Brand:"Netafim",Model:"UniRam RC",ke:1.6,x:0,q:1.6},
+{Brand:"Netafim",Model:"UniRam RC",ke:2.3,x:0,q:2.3},
+{Brand:"Netafim",Model:"UniRam RC",ke:3.5,x:0,q:3.5},
+{Brand:"Netafim",Model:"Aries HWD",ke:0.191,x:0.46,q:0.55},
+{Brand:"Netafim",Model:"Aries HWD",ke:0.277,x:0.46,q:0.79},
+{Brand:"Netafim",Model:"Aries HWD",ke:0.347,x:0.46,q:1.0},
+{Brand:"Netafim",Model:"Aries HWD",ke:0.52,x:0.46,q:1.5},
+{Brand:"Netafim",Model:"Aries HWD",ke:0.693,x:0.46,q:2},
+{Brand:"Netafim",Model:"Aries HWD",ke:1.04,x:0.46,q:3.0},
+{Brand:"Netafim",Model:"Aries HWD",ke:1.387,x:0.46,q:4.0},
+{Brand:"Netafim",Model:"Aries HWD",ke:2.773,x:0.46,q:8.0},
+{Brand:"Netafim",Model:"Typhoon Plus",ke:0.177,x:0.45,q:0.5},
+{Brand:"Netafim",Model:"Typhoon Plus",ke:0.247,x:0.45,q:0.7},
+{Brand:"Netafim",Model:"Typhoon Plus",ke:0.355,x:0.45,q:1.07},
+{Brand:"Netafim",Model:"Typhoon Plus",ke:0.567,x:0.45,q:1.6},
+{Brand:"Netafim",Model:"Typhoon Plus",ke:0.78,x:0.45,q:2.2}
+];
+
+const lateralPipes=[{OD:16,ID:13.8},{OD:12,ID:12.6}];
+const pvcpipes = [
+    { OD:"40-6", ID:37.2},
+    { OD:"50-6", ID:46.52},
+    { OD:"63-4", ID:60.01},
+    { OD:"63-6", ID:58.65},
+    { OD:"75-4", ID:71.46},
+    { OD:"75-6", ID:69.84},
+    { OD:"90-4", ID:85.78},
+    { OD:"90-6", ID:83.83}
+];
+
+/* ========================= FITTINGS DATABASE ========================= */
+const fittings = [
+    { Component:"Swing check valve", kf:2},
+    { Component:"Sudden reduction", kf:0.22},
+    { Component:"Globe valve", kf:6},
+    { Component:"Sudden enlargement", kf:0.19},
+    { Component:"Elbow 45", kf:0.28},
+    { Component:"Elbow 90", kf:0.7},
+    { Component:"Ball Valve", kf:0.05},
+    { Component:"Gate Valve", kf:0.15},
+    { Component:"Butterfly Valve", kf:0.9},
+    { Component:"Water meter", kf:2.5},
+    { Component:"Foot valve with strainer", kf:8},
+    { Component:"Tee", kf:1}
+];
+
+/* ========================= INITIALIZE DROPDOWNS ========================= */
+const brandSel=document.getElementById("brand"), modelSel=document.getElementById("model"), qSel=document.getElementById("qsel");
+const pipeOD=document.getElementById("pipeOD");
+const subOD=document.getElementById("subOD");
+const mainOD=document.getElementById("mainOD");
+
+// Populate brand dropdown
+[...new Set(data.map(d=>d.Brand))].forEach(b=>{ 
+    let o=document.createElement("option"); 
+    o.text=b; 
+    brandSel.add(o);
+});
+
+// Populate lateral pipe OD dropdown
+lateralPipes.forEach(p=>{ 
+    let o=document.createElement("option"); 
+    o.text=p.OD; 
+    pipeOD.add(o);
+});
+
+// Populate submain and mainline pipe OD dropdowns
+pvcpipes.forEach(p=>{
+    let o=document.createElement("option");
+    o.text = p.OD;
+    subOD.add(o.cloneNode(true));
+    mainOD.add(o.cloneNode(true));
+});
+
+/* ========================= EVENT HANDLERS ========================= */
+brandSel.onchange=()=>{ 
+    modelSel.innerHTML=""; 
+    [...new Set(data.filter(d=>d.Brand==brandSel.value).map(d=>d.Model))].forEach(m=>{ 
+        let o=document.createElement("option"); 
+        o.text=m; 
+        modelSel.add(o);
+    }); 
+    modelSel.onchange();
+};
+
+modelSel.onchange=()=>{ 
+    qSel.innerHTML=""; 
+    data.filter(d=>d.Brand==brandSel.value && d.Model==modelSel.value).forEach(d=>{ 
+        let o=document.createElement("option"); 
+        o.text=d.q; 
+        qSel.add(o);
+    }); 
+    qSel.onchange();
+};
+
+qSel.onchange=()=>{ 
+    let r=data.find(d=>d.Brand==brandSel.value && d.Model==modelSel.value && d.q==qSel.value); 
+    document.getElementById("ke").value=r.ke; 
+    document.getElementById("x").value=r.x;
+};
+
+pipeOD.onchange=()=>{
+    document.getElementById("pipeID").value = lateralPipes.find(p=>p.OD==pipeOD.value).ID;
+};
+
+subOD.onchange = () => {
+    document.getElementById("subID").value = pvcpipes.find(p=>p.OD==subOD.value).ID;
+};
+
+mainOD.onchange = () => {
+    document.getElementById("mainID").value = pvcpipes.find(p=>p.OD==mainOD.value).ID;
+};
+
+/* ========================= INITIALIZE ON LOAD ========================= */
+window.onload = function() {
+    brandSel.onchange();
+    pipeOD.onchange();
+    subOD.onchange();
+    mainOD.onchange();
+    addMinorLossSegment(); // Add first minor loss segment on load
+    
+    // Set current date in report tab
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('report_date').value = today;
+};
+
+/* ========================= LATERAL CALCULATIONS ========================= */
+let storedLmax=0, storedQ=0, storedSe=0, storedHa=0;
+
+function calculate(){
+    const ha0=parseFloat(document.getElementById("ha").value);
+    const Se0=parseFloat(document.getElementById("Se").value);
+    const Vha0=parseFloat(document.getElementById("Vha").value);
+    const ke0=parseFloat(document.getElementById("ke").value);
+    const x0=parseFloat(document.getElementById("x").value);
+    const ID=parseFloat(document.getElementById("pipeID").value);
+    
+    if(isNaN(ha0) || isNaN(Se0) || isNaN(Vha0)) {
+        alert("Please enter all required lateral inputs: ha, Se, and Vha");
+        return;
+    }
+    
+    const q=ke0*Math.pow(ha0,x0);
+    document.getElementById("qcalc").value=q.toFixed(3);
+    
+    const Lmax0=Math.pow((5.83*ha0*Vha0*Math.pow(ID,4.75))/Math.pow(q/Se0,1.75),0.3636);
+    document.getElementById("Lmax").value=Lmax0.toFixed(2);
+    
+    storedLmax=Lmax0; 
+    storedQ=q; 
+    storedSe=Se0; 
+    storedHa=ha0;
+    
+    alert("Lateral maximum length calculated. You can now proceed to 'Friction Loss in Laterals' section.");
+}
+
+function calculateActual(){
+    const Lact0=parseFloat(document.getElementById("Lact").value);
+    const S=parseFloat(document.getElementById("slope").value);
+    const ID=parseFloat(document.getElementById("pipeID").value);
+    
+    if(isNaN(Lact0)) {
+        alert("Please enter actual lateral length (Lact)");
+        return;
+    }
+    
+    if(storedQ === 0 || storedSe === 0) {
+        alert("Please calculate maximum lateral length first");
+        return;
+    }
+    
+    const Ql0=((Lact0/storedSe)*storedQ)/3600;
+    document.getElementById("Ql").value=Ql0.toExponential(4);
+    
+    const hf0=0.36*Lact0*1.212e10*Math.pow(Ql0/150,1.852)*Math.pow(ID,-4.87);
+    document.getElementById("hf").value=hf0.toFixed(3);
+    
+    const h00=storedHa+0.5*S*Lact0+0.75*hf0;
+    document.getElementById("h0").value=h00.toFixed(3);
+    
+    const Lm0=(1-Math.pow(Math.abs(S*Lact0)/(hf0/0.36),0.54))*Lact0;
+    document.getElementById("Lm").value=Lm0.toFixed(2);
+    
+    const hmin0=h00 - S*Lm0 - hf0*Math.pow(Lm0/Lact0,1.852);
+    document.getElementById("hmin").value=hmin0.toFixed(3);
+    
+    const hL0=h00 - S*Lact0 - hf0;
+    document.getElementById("hL").value=hL0.toFixed(3);
+
+    const hminAll=Math.min(h00,hmin0,hL0);
+    const hmaxAll=Math.max(h00,hmin0,hL0);
+    document.getElementById("hmin2").value=hminAll.toFixed(3);
+    document.getElementById("hmax2").value=hmaxAll.toFixed(3);
+    
+    const hvar0=(1-hminAll/hmaxAll)*100;
+    document.getElementById("hvar").value=hvar0.toFixed(2);
+    
+    const hpermiSub = 10 - hvar0;
+    document.getElementById("hpermi_sub").value = hpermiSub.toFixed(2);
+    
+    const x0=parseFloat(document.getElementById("x").value);
+    const qvar0=(1-Math.pow(hminAll/hmaxAll,x0))*100;
+    document.getElementById("qvar").value=qvar0.toFixed(2);
+    
+    document.getElementById("status").value = (hvar0 <= 10 && qvar0 <= 5) ? "PASS" : "FAIL";
+    
+    alert("Lateral friction loss calculated. You can now proceed to Submain design tab.");
+}
+
+/* ========================= SUBMAIN CALCULATIONS ========================= */
+function calculateSubmain(){
+    if(storedQ === 0 || storedSe === 0){
+        alert("First calculate Lateral before Submain (go to Lateral Design tab)");
+        switchTab('lateral');
+        return;
+    }
+
+    const Asub0 = parseFloat(document.getElementById("Asub").value);
+    const Scrop0 = parseFloat(document.getElementById("Scrop").value);
+    const IDsub = parseFloat(document.getElementById("subID").value);
+    const Ls0    = parseFloat(document.getElementById("Ls").value);
+
+    if(isNaN(Asub0) || isNaN(Scrop0) || isNaN(Ls0)){
+        alert("Enter Submain area, crop spacing and submain length");
+        return;
+    }
+
+    // Application rate
+    const AR0 = storedQ / (Scrop0 * storedSe);
+    document.getElementById("AR").value = AR0.toFixed(3);
+
+    // Submain discharge
+    const Qsub0 = Asub0 * AR0;
+    document.getElementById("Qsub").value = Qsub0.toFixed(2);
+
+    // Velocity calculation
+    const Vs0 = (Qsub0*0.001/3600) / ((Math.PI/4) * Math.pow(IDsub*0.001,2));
+    document.getElementById("Vs").value = Vs0.toFixed(3);
+
+    if(Vs0 < 0.8){
+        document.getElementById("Vstatus").value = "Velocity too low – reduce pipe size";
+    }
+    else if(Vs0 > 1.5){
+        document.getElementById("Vstatus").value = "Velocity too high – increase pipe size";
+    }
+    else{
+        document.getElementById("Vstatus").value = "Velocity OK";
+    }
+    
+    // Submain friction loss
+    const Qs_lps = Qsub0 / 3600;   // convert L/h → L/s
+    const C = 150;
+
+    const hfs0 = 0.36 * Ls0 * 1.212e10 * Math.pow(Qs_lps / C, 1.852) * Math.pow(IDsub, -4.87);
+    document.getElementById("hfs").value = hfs0.toFixed(3);
+    
+    const Ss0 = parseFloat(document.getElementById("Ss").value);
+
+    if(isNaN(Ss0)){
+        alert("Enter Submain slope");
+        return;
+    }
+    
+    // Manifold inlet head
+    const h0_lateral = parseFloat(document.getElementById("h0").value);
+
+    const hmo0 = h0_lateral + 0.5 * Ss0 * Ls0 + 0.75 * hfs0;
+    document.getElementById("hmo").value = hmo0.toFixed(3);
+    
+    // Minimum pressure location in Submain
+    const Lminsub0 = (1 - Math.pow( Math.abs(Ss0 * Ls0) / (hfs0 / 0.36), 0.54 )) * Ls0;
+    document.getElementById("Lminsub").value = Lminsub0.toFixed(2);
+    
+    // Minimum submain pressure
+    const hminsub0 = hmo0 - Ss0 * Lminsub0 - ( (hfs0 / 0.36) / 2.852 ) * ( 1 - Math.pow( 1 - (Lminsub0 / Ls0), 2.852 ) );
+    document.getElementById("hminsub").value = hminsub0.toFixed(3);
+
+    // Submain distal end (maximum) pressure
+    const hmaxsub0 = hmo0 + Math.abs(Ss0 * Ls0) - hfs0;
+    document.getElementById("hmaxsub").value = hmaxsub0.toFixed(3);
+    
+    // Submain pressure variation
+    const hmin_all_sub = Math.min(hmo0, hminsub0, hmaxsub0);
+    const hmax_all_sub = Math.max(hmo0, hminsub0, hmaxsub0);
+
+    document.getElementById("hmin_sub_all").value = hmin_all_sub.toFixed(3);
+    document.getElementById("hmax_sub_all").value = hmax_all_sub.toFixed(3);
+
+    const hvar_sub0 = 1 - (hmin_all_sub / hmax_all_sub);
+    document.getElementById("hvar_sub").value = (hvar_sub0 * 100).toFixed(2);
+    
+    // Permissible submain pressure variation from lateral
+    const hpermi_sub0 = parseFloat(document.getElementById("hpermi_sub").value);
+
+    // Compare calculated vs permissible
+    if( (hvar_sub0 * 100) <= hpermi_sub0 ){
+        document.getElementById("sub_status").value = "PASS";
+    }
+    else{
+        document.getElementById("sub_status").value = "FAIL";
+    }
+    
+    alert("Submain design calculated. You can now proceed to Mainline design tab.");
+}
+
+/* ========================= MAINLINE CALCULATIONS ========================= */
+function calculateMainline(){
+    const Qm0   = parseFloat(document.getElementById("Qm").value);
+    const Lm0   = parseFloat(document.getElementById("Lm_main").value);
+    const IDm   = parseFloat(document.getElementById("mainID").value);
+    const Sm0   = parseFloat(document.getElementById("Sm").value);
+    const C = 150;
+
+    if(isNaN(Qm0) || isNaN(Lm0)){
+        alert("Enter mainline flow and length");
+        return;
+    }
+
+    // Velocity
+    const Vm0 = (Qm0 * 0.001 / 3600) / ((Math.PI/4) * Math.pow(IDm * 0.001,2));
+    document.getElementById("Vm").value = Vm0.toFixed(3);
+
+    // Friction loss (Hazen–Williams)
+    const Qm_lps = Qm0 / 3600;
+
+    const hfm0 = Lm0 * 1.212e10 * Math.pow(Qm_lps / C, 1.852) * Math.pow(IDm, -4.87);
+    document.getElementById("hfm").value = hfm0.toFixed(3);
+    
+    // Static head due to slope
+    const hsm0 = Sm0 * Lm0;
+    document.getElementById("hsm").value = hsm0.toFixed(3);
+}
+
+/* ========================= SEGMENTED MAINLINE ========================= */
+let mainSegCount = 1;
+
+function addMainSegment(){
+    mainSegCount++;
+
+    let div = document.createElement("div");
+    div.style.border = "1px solid #aaa";
+    div.style.padding = "15px";
+    div.style.marginBottom = "15px";
+    div.style.backgroundColor = "#f9f9f9";
+    div.style.borderRadius = "4px";
+
+    div.innerHTML = `
+        <h4 style="margin-top: 0; color: #2c3e50;">Mainline Segment ${mainSegCount}</h4>
+        <label>Flow Q (L/h)</label>
+        <input class="Qm"><br>
+        <label>Length L (m)</label>
+        <input class="Lm"><br>
+        <label>Slope S (+ uphill, − downhill)</label>
+        <input class="Sm"><br>
+        <label>Pipe OD</label>
+        <select class="ODm"></select><br>
+        <label>Pipe ID (mm)</label>
+        <input class="IDm" readonly><br>
+        
+        <button onclick="calculateSegment(this)" class="calculate-btn" style="margin-top: 10px;">Calculate This Segment</button><br>
+        
+        <label>Velocity (m/s)</label>
+        <input class="Vm" readonly><br>
+        <label>Friction loss (m)</label>
+        <input class="hf" readonly><br>
+        <label>Static head (m)</label>
+        <input class="hs" readonly><br>
+    `;
+
+    document.getElementById("mainSegments").appendChild(div);
+
+    const odSel = div.querySelector(".ODm");
+
+    pvcpipes.forEach(p=>{
+        let o = document.createElement("option");
+        o.text = p.OD;
+        odSel.add(o);
+    });
+
+    odSel.onchange = () => {
+        div.querySelector(".IDm").value = pvcpipes.find(p=>p.OD==odSel.value).ID;
+    };
+    odSel.onchange();
+}
+
+function calculateSegment(buttonElement) {
+    const segmentDiv = buttonElement.parentElement;
+    const Q = parseFloat(segmentDiv.querySelector(".Qm").value);
+    const L = parseFloat(segmentDiv.querySelector(".Lm").value);
+    const S = parseFloat(segmentDiv.querySelector(".Sm").value);
+    const ID = parseFloat(segmentDiv.querySelector(".IDm").value);
+    const C = 150;
+
+    if(isNaN(Q) || isNaN(L) || isNaN(S)) {
+        alert("Please enter all required values for this segment: Flow, Length, and Slope");
+        return;
+    }
+
+    const Qlps = Q / 3600;
+
+    // Calculate velocity
+    const V = (Q * 0.001 / 3600) / ((Math.PI/4) * Math.pow(ID * 0.001, 2));
+    segmentDiv.querySelector(".Vm").value = V.toFixed(3);
+
+    // Calculate friction loss
+    const hf = 0.36 * L * 1.212e10 * Math.pow(Qlps / C, 1.852) * Math.pow(ID, -4.87);
+    segmentDiv.querySelector(".hf").value = hf.toFixed(3);
+
+    // Calculate static head
+    const hs = S * L;
+    segmentDiv.querySelector(".hs").value = hs.toFixed(3);
+
+    alert(`Segment ${mainSegCount} calculated successfully!\nVelocity: ${V.toFixed(3)} m/s\nFriction Loss: ${hf.toFixed(3)} m\nStatic Head: ${hs.toFixed(3)} m`);
+}
+
+function calculateAllMainline(){
+    let totalF = parseFloat(document.getElementById("hfm").value) || 0;
+    let totalS = parseFloat(document.getElementById("hsm").value) || 0;
+    const C = 150;
+
+    const segs = document.querySelectorAll("#mainSegments > div");
+
+    segs.forEach((seg, index) => {
+        const Q = parseFloat(seg.querySelector(".Qm").value);
+        const L = parseFloat(seg.querySelector(".Lm").value);
+        const S = parseFloat(seg.querySelector(".Sm").value);
+        const ID = parseFloat(seg.querySelector(".IDm").value);
+
+        if(isNaN(Q) || isNaN(L) || isNaN(S)) {
+            alert(`Please calculate Segment ${index + 2} first before calculating total`);
+            return;
+        }
+
+        const Qlps = Q / 3600;
+
+        const hf = 0.36 * L * 1.212e10 * Math.pow(Qlps / C, 1.852) * Math.pow(ID, -4.87);
+        const hs = S * L;
+
+        totalF += hf;
+        totalS += hs;
+    });
+
+    document.getElementById("hfm_tot").value = totalF.toFixed(3);
+    document.getElementById("hsm_tot").value = totalS.toFixed(3);
+    document.getElementById("Hm_tot").value  = (totalF + totalS).toFixed(3);
+    
+    alert("Total mainline loss calculated. Design complete!");
+}
+
+/* ========================= MINOR LOSSES CALCULATIONS ========================= */
+let minorLossCount = 0;
+
+function addMinorLossSegment() {
+    minorLossCount++;
+    
+    const segmentId = `minorLoss${minorLossCount}`;
+    
+    let div = document.createElement("div");
+    div.className = "minor-loss-segment";
+    div.id = segmentId;
+    
+    div.innerHTML = `
+        <div class="minor-loss-header">Fitting ${minorLossCount}</div>
+        
+        <label>Pipe Flow Q (L/h)</label>
+        <input class="minorFlow" placeholder="Enter flow rate in L/h"><br>
+        
+        <label>Pipe Size (OD)</label>
+        <select class="minorPipeOD"></select><br>
+        
+        <label>Pipe ID (mm)</label>
+        <input class="minorPipeID" readonly><br>
+        
+        <label>Fitting Type</label>
+        <select class="minorFitting"></select><br>
+        
+        <label>Loss Coefficient k<sub>f</sub></label>
+        <input class="minorKf" readonly><br>
+        
+        <button onclick="calculateMinorLoss(this)" class="calculate-btn" style="margin-top: 10px;">Calculate This Fitting</button><br>
+        
+        <div class="results-box" style="margin-top: 10px;">
+            <h4 style="margin-top: 0;">Fitting Calculation Results</h4>
+            <label>Velocity V (m/s)</label>
+            <input class="minorVelocity" readonly><br>
+            
+            <label>Velocity Head V²/2g (m)</label>
+            <input class="minorVelocityHead" readonly><br>
+            
+            <label>Minor Loss h<sub>minor</sub> (m)</label>
+            <input class="minorLoss" readonly><br>
+        </div>
+    `;
+    
+    document.getElementById("minorLossSegments").appendChild(div);
+    
+    // Populate pipe OD dropdown
+    const pipeODSelect = div.querySelector(".minorPipeOD");
+    pvcpipes.forEach(p => {
+        let o = document.createElement("option");
+        o.text = p.OD;
+        pipeODSelect.add(o);
+    });
+    
+    // Populate fitting dropdown
+    const fittingSelect = div.querySelector(".minorFitting");
+    fittings.forEach(f => {
+        let o = document.createElement("option");
+        o.text = f.Component;
+        fittingSelect.add(o);
+    });
+    
+    // Set up event handlers
+    pipeODSelect.onchange = () => {
+        const pipe = pvcpipes.find(p => p.OD == pipeODSelect.value);
+        if (pipe) {
+            div.querySelector(".minorPipeID").value = pipe.ID;
+        }
+    };
+    
+    fittingSelect.onchange = () => {
+        const fitting = fittings.find(f => f.Component == fittingSelect.value);
+        if (fitting) {
+            div.querySelector(".minorKf").value = fitting.kf;
+        }
+    };
+    
+    // Trigger initial values
+    if (pipeODSelect.options.length > 0) {
+        pipeODSelect.selectedIndex = 0;
+        pipeODSelect.onchange();
+    }
+    
+    if (fittingSelect.options.length > 0) {
+        fittingSelect.selectedIndex = 0;
+        fittingSelect.onchange();
+    }
+    
+    // Update number of fittings
+    document.getElementById("numFittings").value = minorLossCount;
+}
+
+function calculateMinorLoss(buttonElement) {
+    const segmentDiv = buttonElement.parentElement;
+    const Q = parseFloat(segmentDiv.querySelector(".minorFlow").value);
+    const ID = parseFloat(segmentDiv.querySelector(".minorPipeID").value);
+    const kf = parseFloat(segmentDiv.querySelector(".minorKf").value);
+    
+    if (isNaN(Q) || isNaN(ID) || isNaN(kf)) {
+        alert("Please enter all required values: Flow, Pipe ID, and select a fitting type");
+        return;
+    }
+    
+    if (Q <= 0) {
+        alert("Flow rate must be greater than 0");
+        return;
+    }
+    
+    // Constants
+    const g = 9.81; // m/s²
+    
+    // Calculate velocity (convert Q from L/h to m³/s, ID from mm to m)
+    const Q_m3s = Q * 0.001 / 3600; // Convert L/h to m³/s
+    const ID_m = ID * 0.001; // Convert mm to m
+    const A = Math.PI * Math.pow(ID_m, 2) / 4; // Cross-sectional area in m²
+    const V = Q_m3s / A; // Velocity in m/s
+    
+    // Calculate velocity head (V²/2g)
+    const velocityHead = Math.pow(V, 2) / (2 * g);
+    
+    // Calculate minor loss (h_minor = kf * V²/2g)
+    const hMinor = kf * velocityHead;
+    
+    // Update results
+    segmentDiv.querySelector(".minorVelocity").value = V.toFixed(3);
+    segmentDiv.querySelector(".minorVelocityHead").value = velocityHead.toFixed(4);
+    segmentDiv.querySelector(".minorLoss").value = hMinor.toFixed(4);
+    
+    // Get fitting name for message
+    const fittingName = segmentDiv.querySelector(".minorFitting").value;
+    alert(`Fitting ${minorLossCount} (${fittingName}) calculated successfully!\nVelocity: ${V.toFixed(3)} m/s\nVelocity Head: ${velocityHead.toFixed(4)} m\nMinor Loss: ${hMinor.toFixed(4)} m`);
+}
+
+function calculateTotalMinorLosses() {
+    let totalMinorLoss = 0;
+    let calculatedCount = 0;
+    
+    // Get all minor loss segments
+    const segments = document.querySelectorAll(".minor-loss-segment");
+    
+    segments.forEach((segment, index) => {
+        const lossValue = parseFloat(segment.querySelector(".minorLoss").value);
+        
+        if (!isNaN(lossValue)) {
+            totalMinorLoss += lossValue;
+            calculatedCount++;
+        } else {
+            alert(`Fitting ${index + 1} has not been calculated yet. Please calculate all fittings first.`);
+            return;
+        }
+    });
+    
+    if (calculatedCount === 0) {
+        alert("No fittings have been calculated yet. Please calculate at least one fitting.");
+        return;
+    }
+    
+    // Update total results
+    document.getElementById("hminor_tot").value = totalMinorLoss.toFixed(4);
+    document.getElementById("numFittings").value = calculatedCount;
+    
+    alert(`Total minor losses calculated!\nNumber of fittings: ${calculatedCount}\nTotal minor loss: ${totalMinorLoss.toFixed(4)} m`);
+}
+
+/* ========================= FERTIGATION LOSS CALCULATIONS ========================= */
+function calculateFertigationLoss() {
+    const fertigationType = parseInt(document.getElementById("fertigation_type").value);
+    const injectionPoints = parseInt(document.getElementById("injection_points").value);
+    const viscosityFactor = parseFloat(document.getElementById("viscosity_factor").value);
+    
+    // Base head losses for different fertigation systems (in meters)
+    const fertigationLosses = {
+        0: 0,   // No fertigation
+        1: 3,   // Venturi injector
+        2: 4,   // Diaphragm pump
+        3: 5,   // Piston pump
+        4: 2.5, // Fertilizer tank with mixer
+        5: 8    // Complete fertigation unit
+    };
+    
+    let baseLoss = fertigationLosses[fertigationType] || 0;
+    
+    // Adjust for number of injection points
+    if (injectionPoints > 1) {
+        baseLoss *= (1 + (injectionPoints - 1) * 0.3);
+    }
+    
+    // Adjust for viscosity (fertilizer solutions have higher viscosity than water)
+    baseLoss *= viscosityFactor;
+    
+    // Round to 2 decimal places
+    const totalFertigationLoss = Math.round(baseLoss * 100) / 100;
+    
+    document.getElementById("fertigation_loss").value = totalFertigationLoss.toFixed(2);
+    
+    alert(`Fertigation friction loss calculated: ${totalFertigationLoss.toFixed(2)} m\n\n` +
+          `System: ${document.getElementById("fertigation_type").options[fertigationType].text}\n` +
+          `Injection Points: ${injectionPoints}\n` +
+          `Viscosity Factor: ${viscosityFactor}`);
+    
+    return totalFertigationLoss;
+}
+
+/* ========================= PUMP DESIGN CALCULATIONS ========================= */
+function importSystemLosses() {
+    // Import values from other tabs
+    const hf = parseFloat(document.getElementById("hf").value) || 0;
+    const hfs = parseFloat(document.getElementById("hfs").value) || 0;
+    const Hm = parseFloat(document.getElementById("Hm_tot").value) || 0;
+    const hminor = parseFloat(document.getElementById("hminor_tot").value) || 0;
+    
+    document.getElementById("import_hf").value = hf.toFixed(3);
+    document.getElementById("import_hfs").value = hfs.toFixed(3);
+    document.getElementById("import_Hm").value = Hm.toFixed(3);
+    document.getElementById("import_hminor_tot").value = hminor.toFixed(4);
+    
+    // Calculate total friction loss
+    const totalFrictionLoss = hf + hfs + Hm + hminor;
+    document.getElementById("total_friction_loss").value = totalFrictionLoss.toFixed(3);
+    
+    // Update fertigation loss if already calculated
+    const fertigationLoss = parseFloat(document.getElementById("fertigation_loss").value) || 0;
+    document.getElementById("total_fertigation_loss").value = fertigationLoss.toFixed(2);
+    
+    return {
+        hf: hf,
+        hfs: hfs,
+        Hm: Hm,
+        hminor: hminor,
+        fertigationLoss: fertigationLoss,
+        totalFrictionLoss: totalFrictionLoss
+    };
+}
+
+function calculatePumpHP() {
+    // Import current system losses
+    const losses = importSystemLosses();
+    
+    // Get additional inputs
+    const primaryFilter = parseFloat(document.getElementById("primary_filter").value) || 0;
+    const secondaryFilter = parseFloat(document.getElementById("secondary_filter").value) || 0;
+    const suctionHead = parseFloat(document.getElementById("suction_head").value) || 0;
+    const emitterPressure = parseFloat(document.getElementById("emitter_pressure").value);
+    const pumpFlow = parseFloat(document.getElementById("pump_flow").value);
+    const pumpEfficiency = parseFloat(document.getElementById("pump_efficiency").value);
+    const safetyFactor = parseFloat(document.getElementById("safety_factor").value) || 15;
+    
+    // Validate required inputs
+    if (isNaN(emitterPressure)) {
+        alert("Please enter Working Pressure at Emitter");
+        return;
+    }
+    
+    if (isNaN(pumpFlow) || pumpFlow <= 0) {
+        alert("Please enter valid Pump Flow Rate (greater than 0)");
+        return;
+    }
+    
+    if (isNaN(pumpEfficiency) || pumpEfficiency <= 0 || pumpEfficiency > 100) {
+        alert("Please enter valid Pump Efficiency (between 0 and 100%)");
+        return;
+    }
+    
+    // Calculate total filter loss
+    const totalFilterLoss = primaryFilter + secondaryFilter;
+    document.getElementById("total_filter_loss").value = totalFilterLoss.toFixed(3);
+    
+    // Calculate fertigation loss (if not already calculated, calculate it)
+    let fertigationLoss = losses.fertigationLoss;
+    if (fertigationLoss === 0 && document.getElementById("fertigation_type").value !== "0") {
+        fertigationLoss = calculateFertigationLoss();
+    }
+    document.getElementById("total_fertigation_loss").value = fertigationLoss.toFixed(2);
+    
+    // Calculate total system head
+    // H_total = Suction Head + Emitter Pressure + Total Friction Loss + Total Filter Loss + Fertigation Loss
+    const totalSystemHead = suctionHead + emitterPressure + losses.totalFrictionLoss + totalFilterLoss + fertigationLoss;
+    document.getElementById("total_system_head").value = totalSystemHead.toFixed(3);
+    
+    // Apply safety factor
+    const safetyFactorMultiplier = 1 + (safetyFactor / 100);
+    const totalSystemHeadWithSafety = totalSystemHead * safetyFactorMultiplier;
+    document.getElementById("total_system_head_safety").value = totalSystemHeadWithSafety.toFixed(3);
+    
+    // Constants
+    const g = 9.81; // m/s²
+    const waterDensity = 1000; // kg/m³
+    const hpToKw = 0.7457; // 1 HP = 0.7457 kW
+    const kwToHp = 1.341; // 1 kW = 1.341 HP
+    
+    // Convert pump flow from L/h to m³/s
+    const Q_m3s = pumpFlow * 0.001 / 3600; // m³/s
+    
+    // Calculate water power (theoretical power required to move water)
+    // P_water = ρ * g * Q * H / 1000 (kW)
+    const waterPowerKw = (waterDensity * g * Q_m3s * totalSystemHeadWithSafety) / 1000;
+    const waterPowerHp = waterPowerKw * kwToHp;
+    
+    document.getElementById("water_power_kw").value = waterPowerKw.toFixed(3);
+    document.getElementById("water_power_hp").value = waterPowerHp.toFixed(3);
+    
+    // Calculate pump shaft power (considering pump efficiency)
+    const pumpEfficiencyDecimal = pumpEfficiency / 100;
+    const pumpShaftPowerKw = waterPowerKw / pumpEfficiencyDecimal;
+    const pumpShaftPowerHp = pumpShaftPowerKw * kwToHp;
+    
+    document.getElementById("pump_shaft_power_kw").value = pumpShaftPowerKw.toFixed(3);
+    document.getElementById("pump_shaft_power_hp").value = pumpShaftPowerHp.toFixed(3);
+    
+    // Determine recommended pump size (round up to nearest standard size)
+    const standardSizes = [0.5, 0.75, 1, 1.5, 2, 3, 5, 7.5, 10, 15, 20, 25, 30, 40, 50, 60, 75, 100];
+    let recommendedPumpHp = standardSizes.find(size => size >= pumpShaftPowerHp * 1.1) || Math.ceil(pumpShaftPowerHp * 1.1);
+    
+    document.getElementById("recommended_pump_hp").value = recommendedPumpHp.toFixed(1);
+    
+    // Determine status
+    let status = "DESIGN COMPLETE";
+    if (pumpShaftPowerHp > 100) {
+        status = "VERY LARGE PUMP REQUIRED - CONSIDER REDESIGN";
+    } else if (pumpShaftPowerHp > 50) {
+        status = "LARGE PUMP REQUIRED";
+    } else if (pumpShaftPowerHp > 20) {
+        status = "MEDIUM PUMP REQUIRED";
+    } else {
+        status = "SMALL PUMP REQUIRED";
+    }
+    
+    // Add fertigation note if applicable
+    if (fertigationLoss > 0) {
+        status += " (Includes Fertigation System)";
+    }
+    
+    document.getElementById("pump_status").value = status;
+    
+    // Show results summary
+    let summaryMessage = `Pump Design Complete!\n\n` +
+          `Total System Head: ${totalSystemHeadWithSafety.toFixed(2)} m\n` +
+          `Water Power Required: ${waterPowerHp.toFixed(2)} HP\n` +
+          `Pump Shaft Power Required: ${pumpShaftPowerHp.toFixed(2)} HP\n` +
+          `Recommended Pump Size: ${recommendedPumpHp.toFixed(1)} HP\n`;
+    
+    if (fertigationLoss > 0) {
+        summaryMessage += `\nNote: Includes ${fertigationLoss.toFixed(2)} m head loss for fertigation system`;
+    }
+    
+    summaryMessage += `\nStatus: ${status}`;
+    
+    alert(summaryMessage);
+}
+</script>
+</body>
+</html>
+
+
+
+
+
+
